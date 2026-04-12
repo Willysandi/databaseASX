@@ -7,8 +7,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-DB_URL = os.getenv("DATABASE_URL")
+try:
+    import streamlit as st
+    ANTHROPIC_KEY = st.secrets["ANTHROPIC_API_KEY"]
+    DB_URL = st.secrets["DATABASE_URL"]
+except:
+    load_dotenv()
+    ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
+    DB_URL = os.getenv("DATABASE_URL")
+
+client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
 def run_query(sql: str):
     conn = psycopg2.connect(DB_URL)
