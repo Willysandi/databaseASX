@@ -34,6 +34,7 @@ examples = [
     "Which stock had the biggest single-day price drop this year?",
     "Compare the closing prices of CBA.AX and NAB.AX over the last 30 days",
     "Which stock has the highest average trading volume?",
+    "What stock had the lowest closing price over the past 6 months",
 ]
 
 cols = st.columns(2)
@@ -64,7 +65,7 @@ if st.button("Ask Claude", type="primary") and question:
 
     # Data table
     if result["rows"]:
-        st.subheader("Raw Data")
+        st.subheader("Data")
         df = pd.DataFrame(result["rows"], columns=result["columns"])
         st.dataframe(df, use_container_width=True)
 
