@@ -13,7 +13,6 @@ st.markdown("Ask any question about ASX stock performance in plain English.")
 
 st.divider()
 
-# Sidebar
 with st.sidebar:
     st.header("About")
     st.markdown("""
@@ -26,7 +25,6 @@ with st.sidebar:
     st.markdown("**Stocks tracked:**")
     st.markdown("BHP, CBA, CSL, NAB, WBC, ANZ, WES, MQG, RIO, TLS")
 
-# Example questions
 st.subheader("Try asking:")
 examples = [
     "Which stock had the highest closing price last month?",
@@ -42,7 +40,6 @@ for i, example in enumerate(examples):
     if cols[i % 2].button(example, use_container_width=True):
         st.session_state.question = example
 
-# Input
 question = st.text_input(
     "Your question:",
     value=st.session_state.get("question", ""),
@@ -51,25 +48,25 @@ question = st.text_input(
 
 if st.button("Ask Claude", type="primary") and question:
     with st.spinner("Claude is thinking..."):
-        result = ask_claude(question)
+        try:
+            result = ask_claude(question)
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")
+            st.stop()
 
     st.divider()
 
-    # Insight
     st.subheader("Claude's Insight")
     st.info(result["insight"])
 
-    # SQL
     with st.expander("View generated SQL"):
         st.code(result["sql"], language="sql")
 
-    # Data table
     if result["rows"]:
         st.subheader("Data")
         df = pd.DataFrame(result["rows"], columns=result["columns"])
         st.dataframe(df, use_container_width=True)
 
-        # Chart if close column exists
         if "close" in df.columns and "date" in df.columns:
             st.subheader("Price Chart")
             df["date"] = pd.to_datetime(df["date"])

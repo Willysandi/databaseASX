@@ -2,36 +2,35 @@ import anthropic
 import psycopg2
 import os
 import json
-import streamlit as st
 from dotenv import load_dotenv
-
-load_dotenv()
 
 try:
     import streamlit as st
     ANTHROPIC_KEY = st.secrets["ANTHROPIC_API_KEY"]
     DB_URL = st.secrets["DATABASE_URL"]
-except:
+except Exception:
     load_dotenv()
     ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
     DB_URL = os.getenv("DATABASE_URL")
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
+def is_safe_sql(sql: str) -> bool:
+    return sql.strip().split()[0].upper() == "SELECT"
+
 def run_query(sql: str):
-    conn = psycopg2.connect(DB_URL)
-    cur = conn.cursor()
-    cur.execute(sql)
-    columns = [desc[0] for desc in cur.description]
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    if not is_safe_sql(sql):
+        raise ValueError("Only SELECT queries are allowed.")
+    with psycopg2.connect(DB_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            columns = [desc[0] for desc in cur.description]
+            rows = cur.fetchall()
     return columns, rows
 
 def ask_claude(question: str):
-    # Step 1: Ask Claude to generate SQL
     sql_response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1000,
         system="""You are a PostgreSQL expert. Convert the user's question into a SQL query.
         The database has one table called asx_stocks with these columns:
@@ -42,25 +41,23 @@ def ask_claude(question: str):
         - low (NUMERIC): lowest price
         - close (NUMERIC): closing price
         - volume (BIGINT): number of shares traded
-        
+
         Return ONLY the SQL query, nothing else. No explanation, no markdown, just raw SQL.""",
         messages=[{"role": "user", "content": question}]
     )
-    
+
     sql = sql_response.content[0].text.strip()
-    
+
     try:
-        # Step 2: Run the SQL against PostgreSQL
         columns, rows = run_query(sql)
-        
-        # Step 3: Ask Claude to interpret the results
+
         result_data = {"columns": columns, "rows": [list(r) for r in rows]}
-        
+
         insight_response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1000,
-            system="""You are a financial analyst specialising in ASX stocks. 
-            The user asked a question and you ran a SQL query to get data. 
+            system="""You are a financial analyst specialising in ASX stocks.
+            The user asked a question and you ran a SQL query to get data.
             Now provide a clear, concise insight based on the results.
             Be specific, mention actual numbers, and keep it to 3-5 sentences.""",
             messages=[
@@ -68,22 +65,22 @@ def ask_claude(question: str):
                 Original question: {question}
                 SQL query used: {sql}
                 Results: {json.dumps(result_data, default=str)}
-                
+
                 Please provide a clear insight based on these results.
                 """}
             ]
         )
-        
+
         insight = insight_response.content[0].text.strip()
-        
+
         return {
             "sql": sql,
             "columns": columns,
             "rows": rows,
             "insight": insight
         }
-    
-    except Exception as e:
+
+    except (psycopg2.Error, ValueError) as e:
         return {
             "sql": sql,
             "columns": [],
