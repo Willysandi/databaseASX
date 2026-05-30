@@ -4,14 +4,12 @@ import os
 import json
 from dotenv import load_dotenv
 
-try:
-    import streamlit as st
-    ANTHROPIC_KEY = st.secrets["ANTHROPIC_API_KEY"]
-    DB_URL = st.secrets["DATABASE_URL"]
-except Exception:
-    load_dotenv()
-    ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
-    DB_URL = os.getenv("DATABASE_URL")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
+DB_URL = os.getenv("DATABASE_URL")
+
+if not ANTHROPIC_KEY:
+    raise EnvironmentError("ANTHROPIC_API_KEY not found. Check your .env file.")
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 

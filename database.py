@@ -41,17 +41,18 @@ def load_asx_data():
                 try:
                     print(f"Downloading {ticker}...")
                     df = yf.download(ticker, period="1y", auto_adjust=True)
-                    df.reset_index(inplace=True)
-                    df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
 
-                    for _, row in df.iterrows():
+                    if isinstance(df.columns, pd.MultiIndex):
+                        df.columns = [col[0] for col in df.columns]
+
+                    for date, row in df.iterrows():
                         cur.execute("""
                             INSERT INTO asx_stocks (ticker, date, open, high, low, close, volume)
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT DO NOTHING
                         """, (
                             ticker,
-                            pd.Timestamp(row["Date"]).date(),
+                            date.date(),
                             float(row["Open"]),
                             float(row["High"]),
                             float(row["Low"]),
@@ -93,17 +94,17 @@ def update_asx_data():
                         print(f"  No new data for {ticker}")
                         continue
 
-                    df.reset_index(inplace=True)
-                    df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+                    if isinstance(df.columns, pd.MultiIndex):
+                        df.columns = [col[0] for col in df.columns]
 
-                    for _, row in df.iterrows():
+                    for date, row in df.iterrows():
                         cur.execute("""
                             INSERT INTO asx_stocks (ticker, date, open, high, low, close, volume)
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (ticker, date) DO NOTHING
                         """, (
                             ticker,
-                            pd.Timestamp(row["Date"]).date(),
+                            date.date(),
                             float(row["Open"]),
                             float(row["High"]),
                             float(row["Low"]),
