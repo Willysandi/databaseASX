@@ -65,7 +65,9 @@ if st.button("Ask Claude", type="primary") and question:
     if result["rows"]:
         st.subheader("Data")
         df = pd.DataFrame(result["rows"], columns=result["columns"])
-        st.dataframe(df, use_container_width=True)
+        price_cols = [c for c in df.columns if c in ("open", "high", "low", "close")]
+        fmt = {c: "${:,.2f}" for c in price_cols}
+        st.dataframe(df.style.format(fmt), use_container_width=True)
 
         if "close" in df.columns and "date" in df.columns:
             st.subheader("Price Chart")

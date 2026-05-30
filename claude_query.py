@@ -8,8 +8,15 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
 DB_URL = os.getenv("DATABASE_URL")
 
+try:
+    import streamlit as st
+    ANTHROPIC_KEY = st.secrets.get("ANTHROPIC_API_KEY") or ANTHROPIC_KEY
+    DB_URL = st.secrets.get("DATABASE_URL") or DB_URL
+except Exception:
+    pass
+
 if not ANTHROPIC_KEY:
-    raise EnvironmentError("ANTHROPIC_API_KEY not found. Check your .env file.")
+    raise EnvironmentError("ANTHROPIC_API_KEY not found in .env or Streamlit secrets.")
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
